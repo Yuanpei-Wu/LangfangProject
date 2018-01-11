@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
+  <script src="/javascripts/jquery-2.2.4.js"></script>
+  <script src="/javascripts/socket.io.js"></script>
+  <script src="/javascripts/highcharts.js"></script>
+  <script src="/javascripts/highcharts-more.js"></script>
+  <script src="/javascripts/layer.js"></script>
+  <script src="/javascripts/jquery.dataTables.js"></script>
+  <script src="/javascripts/bootstrap.js"></script>
+  <script src="/javascripts/app.js"></script>
+  <script src="/javascripts/bootstrap-switch.js"></script>
+  <script src="/javascripts/socketEvent.js"></script>
+
+  <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.css"/>
+  <!--<link rel="stylesheet" type="text/css" href="../public/css/docs.min.css"/>-->
+  <link rel="stylesheet" type="text/css" href="/stylesheets/jquery.dataTables.min.css"/>
+  <link rel="stylesheet" type="text/css" href="/stylesheets/table.css"/>
+  <link rel="stylesheet" type="text/css" href="/stylesheets/AdminLTE.css"/>
+  <link rel="stylesheet" type="text/css" href="/stylesheets/skin-blue.css"/>
+  <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap-switch.css"/>
+
+  <script ID="clientEventHandlersJS" LANGUAGE="javascript">
+
+
+    function isValidIP(ip)
+    {
+      var reg =  /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/
+      return reg.test(ip);
+    }
+
+
+  </script>
+  <script>
+
+    $(function(){
+      var socket={};//此处需要申明一个全局对象，否则页面事件执行出错
+      var marip=[];//重启后需要用到此全局变量
+      var mer_ip=[];
+
+
+      marip=location.hostname;
+      console.log(marip);
+
+      //判断操作系统是否为Linux
+
+
+	$('#wifi_ssid1').val("选择可用wifi");
+	$('#wifi_ssid2').val("选择可用wifi");
+
+
+
+      //侧边栏效果
+      $('.sidebar ul li').click(function(e){
+        $('.sidebar ul li').removeClass('active');
+        $(this).addClass('active');
+      });
+      //固定标题
+      //$('.main-header').stickUp();
+      //$('.navbar-static-top').stickUp();
+
+
+      function checkRebootSuc(){
+        socket = io.connect("http://"+marip+":8080",{'force new connection':true});
+        setTimeout(function(){
+          //console.log(socket);
+          if(socket.connected){
+            layer.closeAll();
+            layer.alert('重启成功!');
+            socketEvent(socket);
+            socket.emit('storeClientInfo', { customId:"Manager" });
+
+              socket.emit("req_wifi_active0");
+              socket.emit("req_wifi_active1");
+            console.log('link success');
+          }else{
+            socket.destroy();
+            setTimeout(function(){
+              checkRebootSuc();
+            },2000);
+          }
+        },500);
+
+      }
+
+
+
+        if(isValidIP(marip)) {
+          socket = io.connect("http://"+marip+":8080");
+
+          setTimeout(function(){
+            if(socket.connected) {
+
+                socket.emit('req_wifi_active0');
+                socket.emit('req_wifi_active1');
+
+              socketEvent(socket);
+            }
+            else layer.alert("Socket连接失败！")
+
+          },500);
+        }
+     
+
+	/**************************************************************socket事件********************************************************/
+	function socketEvent(socket){
+
+
+		//
+        socket.on('wifi_addr_suc', function () {
+            alert("修改成功");
+        })
+		socket.on('wifi_ap_success0',function(){
+            setTimeout(function () {
+                socket.emit('req_wifi_test0');
+            },10000);
+
+        });
+        socket.on('wifi_ap_success1',function(){
+            setTimeout(function () {
+                socket.emit('req_wifi_test1');
+            },10000);
+        });
+        socket.on('get_wifi_test0', function (data) {
+            if(data){
+                if(data!='\n')
+                    $('#wifi_cur1').text("当前连接:"+data);
+                else
+                    alert("请重新输入密码，点击连接");
+            }
+            else{
+                alert("请重新输入密码，点击连接");
+            }
+        })
+        socket.on('get_wifi_test1', function (data) {
+            if(data){
+                if(data!='\n')
+                    $('#wifi_cur2').text("当前连接:"+data);
+                else
+                    alert("请重新输入密码，点击连接");
+            }
+            else{
+                alert("请重新输入密码，点击连接");
+            }
+        })
+
+
+        socket.on('get_wifi_active0', function (data) {
+            if(data){
+                if(data!='\n')
+                         $('#wifi_cur1').text("当前连接:"+data);
+                else
+                         $('#wifi_cur1').text("未连接");
+                }
+                    else{
+                        $('#wifi_cur1').text("未连接");
+                }
+                setTimeout(function () {
+                        socket.emit('req_wifi_active0');
+                },10000);
+        })
+        socket.on('get_wifi_all0', function (wifi_list) {
+            $('#wifi_list1 li').remove();
+            for(var i=0;i<wifi_list.length;i++){
+                $('#wifi_list1').append("<li>"+wifi_list[i]+"</li>");
+
+            }
+		if(wifi_list.length>0)
+            $('#wifi_list1').show();
+		else 
+		alert("无可用wifi，或天线未连接");
+        })
+        socket.on('get_wifi_active1', function (data) {
+            //console.log(data);
+                if(data){
+                        if(data!='\n')
+                                 $('#wifi_cur2').text("当前连接:"+data);
+                        else
+                                 $('#wifi_cur2').text("未连接");
+                        }
+                            else{
+                                $('#wifi_cur2').text("未连接");
+                        }
+                setTimeout(function () {
+                    socket.emit('req_wifi_active1');
+                },10000);
+
+        })
+        socket.on('get_wifi_all1', function (wifi_list) {
+            $('#wifi_list2 li').remove();
+            for(var i=0;i<wifi_list.length;i++){
+                $('#wifi_list2').append("<li>"+wifi_list[i]+"</li>");
+
+            }
+            if(wifi_list.length>0)
+                $('#wifi_list2').show();
+            else
+                alert("无可用wifi，或天线未连接");
+        })
+
+	}
+
+
+
+      /************************************************************页面事件********************************************************************/
+
+
+
+      //重启
+      $("#reboot").click(function(e){
+        if(socket.connected){
+          if (confirm("确认要重启？")) {
+            socket.emit('reboot_event');
+            socket.disconnect();
+            layer.msg('正在等待设备重启，请稍候', {icon: 16,time:1000000});
+            setTimeout(function(){
+              checkRebootSuc();
+            },15000);
+
+
+          }
+        }else{
+          layer.alert('请先连接设备!');
+        }
+
+      });
+      //关机
+      $('#shutdown').click(function(e){
+        if(socket.connected){
+          if(confirm("确认要关机？")){
+            socket.emit('shutdown_event');
+          }
+        }else{
+          layer.alert('请先连接设备!');
+        }
+      });
+
+
+
+
+      $('#wifi_submit1').click(function(){
+        var wifi_data={};
+        wifi_data.ssid=$('#wifi_ssid1').val();
+        wifi_data.code=$('#wifi_code1').val();
+		if(wifi_data.ssid!="选择可用wifi"){
+		if((wifi_data.code).trim()!=""){
+            setTimeout(function () {
+                socket.emit('req_wifi_test0');
+            },10000);
+            socket.emit('wifi_change0',wifi_data);
+		}else{
+		alert("密码不能为空");
+		}
+			
+		}else{
+			alert("必须选择ssid");
+		}
+	
+      });
+
+        $('#wifi_submit2').click(function(){
+            var wifi_data={};
+            wifi_data.ssid=$('#wifi_ssid2').val();
+            wifi_data.code=$('#wifi_code2').val();
+		if(wifi_data.ssid!="选择可用wifi"){
+		if((wifi_data.code).trim()!=""){
+            setTimeout(function () {
+                socket.emit('req_wifi_test1');
+            },10000);
+            socket.emit('wifi_change1',wifi_data);
+		}else{
+		alert("密码不能为空");
+		}
+			
+		}else{
+			alert("必须选择ssid");
+		}
+
+        });
+	$('#wifi_offline1').click(function(){
+		socket.emit('wifi_offline0');
+	})
+	$('#wifi_offline2').click(function(){
+		socket.emit('wifi_offline1');
+	})
+        $('#wifi_ssid1').click(function () {
+		socket.emit("wifi_try0");
+            socket.emit("req_wifi_all0");
+		alert("正在扫描wifi，请耐心等待3至5秒钟");
+
+        });
+        $('#wifi_ssid2').click(function () {
+		socket.emit("wifi_try1");
+            socket.emit("req_wifi_all1");
+		alert("正在扫描wifi，请耐心等待3至5秒钟");
+
+        });
+        /**
+        $('#wifi_ssid').blur(function () {
+            $('#wifi_list').hide();
+        });
+         **/
+        $('#wifi_list1').on('click','li',function () {
+            $('#wifi_ssid1').val($(this).text());
+            $('#wifi_list1').hide();
+        });
+        $('#wifi_list2').on('click','li',function () {
+            $('#wifi_ssid2').val($(this).text());
+            $('#wifi_list2').hide();
+        });
+        $('#wifi_addr_submit1').on('click', function () {
+
+            var wifi_addr=$('#wifi_addr1').val();
+            var wifi_netmask=$('#wifi_netmask1').val();
+            var wifi_gateway=$('#wifi_gateway1').val();
+            if(isValidIP(wifi_addr)&&isValidIP(wifi_netmask)&&isValidIP(wifi_gateway)){
+                socket.emit('wifi_addr0',{wifi_addr:wifi_addr,wifi_netmask:wifi_netmask,wifi_gateway:wifi_gateway});
+            }else{
+                alert("地址不合法");
+            }
+        });
+
+
+
+
+    });
+
+  </script>
+
+  <title>Modbus/TCP数据采集系统</title>
+  <style>
+    .kuang{margin:0 auto;text-align: center;margin-top:20px;padding-left:40px;padding-right:40px;}
+    #mess{text-align: center}
+    .box{margin:0 auto;text-align: center;margin-top:30px;padding-left:20px;padding-right:20px;}
+    #value{width: 200px;height:80px;border:1px solid;text-align: center;line-height: 200px;display: inline-block;}
+    ul.affix{
+      top:80px;
+    }
+    #wifi_list1{
+        padding-right: 250px;
+        list-style:none;
+	
+    }
+    #wifi_list2{
+        padding-right: 250px;
+        list-style:none;
+
+    }
+    .main-sidebar{
+      width:150px;
+    }
+
+
+  </style>
+</head>
+<body class="skin-blue sidebar-mini">
+
+
+
+<div class="wrapper">
+
+  <header class="main-header fixed">
+    <a href="#" class="logo">
+      <!-- logo for regular state and mobile devices -->
+      <span class="logo-lg"><b>设备</b>管理界面</span>
+    </a>
+    <nav class="navbar navbar-static-top">
+      <div class="navbar-custom-menu">
+        <ul class="nav navbar-nav">
+          <li>
+            <a href="#" id="shutdown">关机</a>
+          </li>
+          <li>
+            <a href="#" id="reboot">重启</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+
+  <aside class='main-sidebar'>
+    <section class='sidebar'>
+      <ul class='sidebar-menu affix'>
+
+        <li class="active">
+          <a href="#">wifi配置</a>
+        </li>
+
+
+      </ul>
+    </section>
+  </aside>
+
+  <div class="content-wrapper">
+    <section class="content">
+      <div class="kuang">
+
+
+
+	<div class="box" id="wifi">
+		<div><h1>wifi配置</h1></div><br>
+
+        <h2>无线0</h2>
+        <h3 id="wifi_cur1" style="color:red"></h3>
+        <label>SSID:</label><input type="text" readonly="true" id="wifi_ssid1" >
+        <label>密码:</label><input type="password" id="wifi_code1" length="20">
+        <input type="button" id="wifi_submit1" style="width:10%;height:40px" value="连接">
+        <input type="button" id="wifi_offline1" style="width:10%;height:40px" value="断开">
+        <ul id="wifi_list1" style="display: none">
+        </ul>
+        <br>
+        <br>
+        <br>
+
+
+        <label>静态地址:</label><input type="text"  id="wifi_addr1" ><br>
+        <label>网络掩码:</label><input type="text"  id="wifi_netmask1" ><br>
+        <label>网关地址:</label><input type="text"  id="wifi_gateway1" ><br>
+
+        <input type="button" id="wifi_addr_submit1" style="width:10%;height:40px" value="修改">
+
+        <br>
+        <br>
+        <h2>无线1</h2>
+        <h3 id="wifi_cur2" style="color:red"></h3>
+        <label>SSID:</label><input type="text" id="wifi_ssid2" readonly="true" >
+        <label>密码:</label><input type="password" id="wifi_code2" length="20">
+        <input type="button" id="wifi_submit2" style="width:10%;height:40px" value="连接">
+        <input type="button" id="wifi_offline2" style="width:10%;height:40px" value="断开">
+        <ul id="wifi_list2" style="display: none">
+        </ul>
+        <br>
+
+	</div>
+
+
+      </div><!--end kuang-->
+    </section>
+  </div><!--end content-wrapper-->
+</div><!--end wrapper-->
+
+
+
+
+
+
+
+
+</body>
+</html>

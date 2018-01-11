@@ -1,0 +1,394 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('UI-mar_v10:server');
+var http = require('http');
+var async=require('async');
+var sys = require('sys');
+var exec = require('child_process').exec;
+var mysql=require('mysql');
+var fs=require('fs');
+//var socket_server=require('../socket_server');
+
+var clients =[];
+var i=0;
+var PPPLinkData={};
+
+//pppObject makes this version commmon.Change it if needed
+var pppObject={'ppp0':'e1','ppp2':'w1','ppp4':'l1'};
+var pppNum=3;
+
+var SysStatusData={'ifDyn':true,'ifSchedule':true,'ifTunnel':true};
+for(var item in pppObject){
+  SysStatusData['if'+item.toUpperCase()]=true;
+  PPPLinkData[item]={};
+}
+
+var rootPercent=0;
+var bootPercent=0;
+
+//连接数据库
+var database_dyninfo = 'dyninfo';
+var database_monitor='monitor';
+var table_init_dyna="init_dyna";
+var table_schedule_data = 'schedule_data';
+var table_service_qos='service_qos';
+var table_traffic_port='traffic_port';
+//创建mysql连接
+var client = mysql.createConnection({
+  host: 'localhost',
+  user: 'demo',
+  password: 'demo'
+});
+
+//client.connect();
+
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '8080');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+var io = require('socket.io').listen(server);
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+
+
+
+/****************************************************socket事件********************************************************/
+io.on('connection', function (socket) {
+  console.log('与UI建立好连接');
+  //socket_server(socket);
+
+
+  //监听客户端自定义的storeClientInfo事件，记录客户端id
+  socket.on('storeClientInfo', function (data) {
+    var clientInfo = new Object();
+    clientInfo.customId     = data.customId;
+    //新增了一个DevID
+    clientInfo.DevID     = data.DevID;
+    clientInfo.clientId     = socket.id;
+    console.log(clientInfo);
+    clients.push(clientInfo);
+
+    console.log('管理员建立连接');
+  });
+
+
+  //如果当websocket客户端断开连接时，会从用户ID列表里，删除该用户id
+  socket.on('disconnect', function (data) {
+    for( var i=0, len=clients.length; i<len; ++i ){
+      var c = clients[i];
+      if(c.clientId == socket.id){
+        clients.splice(i,1);
+        console.log('客户端断开连接');
+        console.log(c);
+        break;
+      }
+    }
+  });
+
+
+
+
+
+
+  //重启
+  socket.on('reboot_event',function(data){
+    console.log('System will reboot!');
+    setTimeout(function(){
+      exec('reboot',function (error,stdout,stderr) {
+        console.log('stdout：',stdout);
+        console.log('stderr：',stderr);
+      });
+    },1000);
+
+  });
+
+  //关机
+  socket.on('shutdown_event',function(data){
+    console.log('System will shutdown!');
+    setTimeout(function(){
+      exec('init 0',function (error,stdout,stderr) {
+        console.log('stdout：',stdout);
+        console.log('stderr：',stderr);
+      });
+    },1000);
+
+  });
+
+
+
+
+  //wifi配置
+  socket.on('wifi_change0',function(data){
+    exec("/usr/local/bin/wifi_change0.sh "+data.ssid+" "+data.code,function(err,stdout,stderr){
+      if(err) console.log(err);
+//      else socket.emit("wifi_ap_success0");
+    })
+  });
+
+    socket.on('req_wifi_active0', function () {
+        exec('/usr/local/bin/wifi_active0.sh', function (err,stdout,stderr) {
+            if(err) console.log(err);
+            fs.readFile('/home/wifi_active0','utf-8', function (err,data) {
+                if(err) console.log(err);
+                socket.emit('get_wifi_active0',data);
+            })
+        })
+
+    });
+    socket.on('req_wifi_all0', function () {
+        exec('/usr/local/bin/wifi.sh', function (err,stdout,stderr) {
+            if(err) console.log(err);
+            fs.readFile('/home/wifi_all0','utf-8', function (err,data) {
+                if(err) console.log(err);
+                var temp_arr=data.split('\n');
+                socket.emit('get_wifi_all0', temp_arr);
+            });
+        })
+
+    })
+
+    socket.on('wifi_change1',function(data){
+        exec("/usr/local/bin/wifi_change1.sh "+data.ssid+" "+data.code,function(err,stdout,stderr){
+            if(err) console.log(err);
+  //          else socket.emit("wifi_ap_success1");
+        })
+    });
+
+    socket.on('req_wifi_active1', function () {
+        exec('/usr/local/bin/wifi_active1.sh', function (err,stdout,stderr) {
+            if(err) console.log(err);
+            fs.readFile('/home/wifi_active1','utf-8', function (err,data) {
+                if(err) console.log(err);
+                socket.emit('get_wifi_active1',data);
+            })
+        })
+
+    });
+    socket.on('req_wifi_all1', function () {
+        exec('/usr/local/bin/wifi.sh', function (err,stdout,stderr) {
+            if(err) console.log(err);
+            fs.readFile('/home/wifi_all1','utf-8', function (err,data) {
+                if(err) console.log(err);
+                var temp_arr=data.split('\n');
+                socket.emit('get_wifi_all1', temp_arr);
+            });
+        })
+
+    })
+	socket.on('wifi_offline0',function(){
+		exec('/usr/local/bin/wifi_change0.sh 123 123',function(err,stdout,stdoerr){
+
+		});
+	});
+	socket.on('wifi_offline1',function(){
+		exec('/usr/local/bin/wifi_change1.sh 123 123',function(err,stdout,stdoerr){
+
+		});
+	});
+	socket.on('wifi_try0',function(){
+		exec('ifup wlan0',function(err,stdout,stdoerr){
+
+		});
+	});
+	socket.on('wifi_try1',function(){
+		exec('ifup wlan1',function(err,stdout,stdoerr){
+
+		});
+	});
+    socket.on('req_wifi_test0', function () {
+        exec('/usr/local/bin/wifi_active0.sh', function (err,stdout,stderr) {
+            if(err) console.log(err);
+            fs.readFile('/home/wifi_active0','utf-8', function (err,data) {
+                if(err) console.log(err);
+                socket.emit('get_wifi_test0',data);
+            })
+        })
+
+    });
+    socket.on('req_wifi_test1', function () {
+        exec('/usr/local/bin/wifi_active1.sh', function (err,stdout,stderr) {
+            if(err) console.log(err);
+            fs.readFile('/home/wifi_active1','utf-8', function (err,data) {
+                if(err) console.log(err);
+                socket.emit('get_wifi_test1',data);
+            })
+        })
+
+    });
+    socket.on('wifi_addr0', function (data) {
+        exec('/usr/local/bin/wifi_addr0.sh '+data.wifi_addr+' '+data.wifi_netmask+' '+data.wifi_gateway, function (err,stdout,stderr) {
+            if(err) console.log(err);
+            else socket.emit('wifi_addr_suc');
+        })
+    });
+    socket.on('wifi_addr1', function () {
+        exec('/usr/local/bin/wifi_addr1.sh '+data, function (err,stdout,stderr) {
+            if(err) console.log(err);
+            else socket.emit('wifi_addr_suc');
+        })
+    })
+
+    socket.on('req_ifconfig_info', function () {
+        data={};
+        async.series([
+            function(callback){
+                exec("ifconfig eth0 |grep inet |awk '{print $2}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['eth0_addr']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig eth0 |grep inet |awk '{print $4}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['eth0_netmask']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig eth1 |grep inet |awk '{print $2}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['eth1_addr']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig eth0 |grep inet |awk '{print $4}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['eth1_netmask']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig wlan0 |grep 'inet addr' |awk '{print $2}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['wlan0_addr']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig wlan0 |grep 'inet addr' |awk '{print $4}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['wlan0_netmask']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig tun0 |grep inet |awk '{print $2}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['tun0_addr']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function(callback){
+                exec("ifconfig tun0 |grep inet |awk '{print $4}'", function (err,stdout,stderr) {
+                    if(err) console.log(err);
+                    else data['tun0_netmask']=stdout.substr(5);
+                    callback(null,null);
+                })
+            },
+            function (callback) {
+                exec("route -n|grep ^0.0.0.0 |awk '{print $2}'", function (err,stdout,stderr) {
+                    if(err)
+                        console.log(err);
+                    else
+                        data['default_gateway']=stdout;
+                    callback(null,null);
+                })
+            },
+
+            function(callback){
+                exec("route -n|grep ^0.0.0.0 |awk '{print $8}'", function (err,stdout,stderr) {
+                    if(err)
+                        console.log(err);
+                    else
+                        data['default_iface']=stdout;
+                    callback(null,null);
+                })
+            }
+        ],function(error , stdout){
+            socket.emit('get_ifconfig_info',data);
+        })
+
+    })
+
+
+});
