@@ -4,9 +4,11 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
   <script src="/javascripts/jquery-2.2.4.js"></script>
   <script src="/javascripts/socket.io.js"></script>
+    <script src="/javascripts/layer.js"></script>
+
   <script src="/javascripts/highcharts.js"></script>
   <script src="/javascripts/highcharts-more.js"></script>
-  <script src="/javascripts/layer.js"></script>
+
   <script src="/javascripts/jquery.dataTables.js"></script>
   <script src="/javascripts/bootstrap.js"></script>
   <script src="/javascripts/app.js"></script>
@@ -14,13 +16,11 @@
   <script src="/javascripts/socketEvent.js"></script>
 
   <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.css"/>
-  <!--<link rel="stylesheet" type="text/css" href="../public/css/docs.min.css"/>-->
   <link rel="stylesheet" type="text/css" href="/stylesheets/jquery.dataTables.min.css"/>
   <link rel="stylesheet" type="text/css" href="/stylesheets/table.css"/>
   <link rel="stylesheet" type="text/css" href="/stylesheets/AdminLTE.css"/>
   <link rel="stylesheet" type="text/css" href="/stylesheets/skin-blue.css"/>
   <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap-switch.css"/>
-
   <script ID="clientEventHandlersJS" LANGUAGE="javascript">
 
 
@@ -60,6 +60,15 @@
       //$('.main-header').stickUp();
       //$('.navbar-static-top').stickUp();
 
+        for(var k=1;k<=8;k++){
+
+                $('#conf_table tbody').append('<tr>\
+                <td><input type="checkbox" id="c'+k+'1'+'"/></td>\
+                <td><input type="text" id="c'+k+'2'+'"/></td>\
+                <td> <input type="text" id="c'+k+'3'+'"></td>\
+                </tr>')
+
+        }
 
       function checkRebootSuc(){
         socket = io.connect("http://"+marip+":8080",{'force new connection':true});
@@ -94,7 +103,7 @@
                 socket.emit('req_ifconfig_info');
                 socket.emit('req_wifi_active0');
                 socket.emit('req_wifi_active1');
-
+                socket.emit('req_conf');
               socketEvent(socket);
             }
             else layer.alert("Socket连接失败！")
@@ -214,6 +223,16 @@
 
         })
 
+        socket.on('get_conf', function (data) {
+            console.log('get_conf',data);
+            for(var item in data){
+                if(item.substr(2,1)=='1') $('#'+item)[0].checked=(data[item]?true:false);
+                else $('#'+item).val(data[item]);
+            }
+        })
+        socket.on('change_conf_suc', function () {
+            layer.alert('修改成功');
+        })
 	}
 
 
@@ -337,8 +356,20 @@
         });
 
         $('#shit').css('padding-left',window.innerWidth*0.3);
+        //$('#conf_table').css('margin-left',window.innerWidth*0.2);
 
-
+        $('#conf_submit').click(function () {
+            data={};
+            for(var i=1;i<=8;i++){
+                for(var j=1;j<=3;j++){
+                    if(j==1)
+                        data['c'+i+'1']=($('#c'+i+'1')[0].checked==true?1:0);
+                    else
+                        data['c'+i+''+j]=$('#c'+i+''+j).val();
+                }
+            }
+            socket.emit('change_conf',data);
+        })
     });
 
   </script>
@@ -401,6 +432,9 @@
         <li class="active">
           <a href="#">wifi配置</a>
         </li>
+          <li >
+              <a href="#conf">数值配置</a>
+          </li>
 
 
       </ul>
@@ -471,6 +505,22 @@
 
 	</div>
 
+
+          <div id="conf" class="box" align="left">
+              <h1>数值配置</h1>
+              <div align="center">
+              <table id="conf_table">
+                  <thead>
+                    <tr><th>开关</th> <th>最小值</th> <th>最大值</th></tr>
+                  </thead>
+                  <tbody>
+
+
+                  </tbody>
+              </table>
+              <input type="button" id="conf_submit" style="width:10%;height:40px" value="修改"/>
+              </div>
+          </div>
 
       </div><!--end kuang-->
     </section>
