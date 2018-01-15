@@ -32,14 +32,14 @@ var rootPercent=0;
 var bootPercent=0;
 
 //连接数据库
-var database_name='test';
+var database_name='demo';
 var datatable_name='configure';
 
 //创建mysql连接
 var client = mysql.createConnection({
   host: 'localhost',
-  user: 'root',
-  password: 'bjtungirc'
+  user: 'demo',
+  password: 'demo'
 });
 
 client.connect();
