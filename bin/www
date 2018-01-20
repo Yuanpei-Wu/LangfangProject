@@ -35,9 +35,9 @@ var bootPercent=0;
 var database_name='demo';
 var datatable_name='configure';
 
-//创建mysql连接
+//创建mysql连接，判断host是db还是localhost
 var client = mysql.createConnection({
-  host: 'localhost',
+  host: 'db',
   user: 'demo',
   password: 'demo'
 });
