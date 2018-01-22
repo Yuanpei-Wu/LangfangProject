@@ -66,6 +66,8 @@
                 <td><input type="checkbox" id="c'+k+'1'+'"/></td>\
                 <td><input type="text" id="c'+k+'2'+'"/></td>\
                 <td> <input type="text" id="c'+k+'3'+'"></td>\
+                <td> <input type="text" id="c'+k+'4'+'"></td>\
+                <td> <input type="text" id="c'+k+'5'+'"></td>\
                 </tr>')
 
         }
@@ -361,7 +363,7 @@
         $('#conf_submit').click(function () {
             data={};
             for(var i=1;i<=8;i++){
-                for(var j=1;j<=3;j++){
+                for(var j=1;j<=5;j++){
                     if(j==1)
                         data['c'+i+'1']=($('#c'+i+'1')[0].checked==true?1:0);
                     else
@@ -511,7 +513,7 @@
               <div align="center">
               <table id="conf_table">
                   <thead>
-                    <tr><th>开关</th> <th>最小值</th> <th>最大值</th></tr>
+                    <tr><th>开关</th> <th>最小值</th> <th>最大值</th><th>系数</th><th>偏差</th></tr>
                   </thead>
                   <tbody>
 
