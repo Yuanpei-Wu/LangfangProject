@@ -41,6 +41,7 @@
 
 
       marip=location.hostname;
+	var marport=location.port;
       console.log(marip);
 
       //判断操作系统是否为Linux
@@ -73,7 +74,7 @@
         }
 
       function checkRebootSuc(){
-        socket = io.connect("http://"+marip+":8080",{'force new connection':true});
+        socket = io.connect("http://"+marip+":"+marport,{'force new connection':true});
         setTimeout(function(){
           //console.log(socket);
           if(socket.connected){
@@ -98,7 +99,7 @@
 
 
         if(isValidIP(marip)) {
-          socket = io.connect("http://"+marip+":8080");
+          socket = io.connect("http://"+marip+":"+marport);
 
           setTimeout(function(){
             if(socket.connected) {
