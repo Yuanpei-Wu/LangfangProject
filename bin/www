@@ -37,8 +37,8 @@ var datatable_name='configure';
 
 //创建mysql连接，判断host是db还是localhost
 var client = mysql.createConnection({
-  host: 'localhost',
-  user: 'demo',
+  host: 'db',
+  user: 'root',
   password: 'demo'
 });
 
