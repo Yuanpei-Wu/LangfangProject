@@ -9,6 +9,14 @@ var routes = require('./routes/index');
 var users = require('./routes/users');
 
 var app = express();
+var session = require('express-session');
+
+app.use(cookieParser('sessiontest'));
+app.use(session({
+    secret: 'sessiontest',//与cookieParser中的一致
+    resave: true,
+    saveUninitialized:true
+}));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

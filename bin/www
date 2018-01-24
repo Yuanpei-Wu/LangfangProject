@@ -12,7 +12,8 @@ var sys = require('sys');
 var exec = require('child_process').exec;
 var mysql=require('mysql');
 var fs=require('fs');
-//var socket_server=require('../socket_server');
+
+
 
 var clients =[];
 var i=0;
