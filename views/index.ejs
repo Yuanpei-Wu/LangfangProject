@@ -63,6 +63,7 @@
         for(var k=1;k<=8;k++){
 
                 $('#conf_table tbody').append('<tr>\
+                <td>'+k+'</td>\
                 <td><input type="checkbox" id="c'+k+'1'+'"/></td>\
                 <td><input type="text" id="c'+k+'2'+'"/></td>\
                 <td> <input type="text" id="c'+k+'3'+'"></td>\
@@ -513,7 +514,7 @@
               <div align="center">
               <table id="conf_table">
                   <thead>
-                    <tr><th>开关</th> <th>最小值</th> <th>最大值</th><th>系数</th><th>偏差</th></tr>
+                    <tr><th>序号</th><th>开关</th> <th>最小值</th> <th>最大值</th><th>系数</th><th>偏差</th></tr>
                   </thead>
                   <tbody>
 
